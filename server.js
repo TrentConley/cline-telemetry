@@ -7,6 +7,17 @@ const app  = express()
 const PORT = 8000
 
 // ────────────────────────────────────────────────────────────
+// PostgreSQL setup (uses env vars: PGHOST, PGUSER, PGPASSWORD, PGDATABASE, etc.)
+const { pool } = require('./db')
+
+// Serve React build (if present) – production mode
+const prodDir = path.join(__dirname, 'frontend', 'dist')
+if (fs.existsSync(prodDir)) {
+  app.use(express.static(prodDir))
+}
+
+
+// ────────────────────────────────────────────────────────────
 // middleware
 app.use(express.json())
 app.use(express.static('public'))
@@ -18,9 +29,16 @@ if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir)
 // ────────────────────────────────────────────────────────────
 // helpers
 function appendEvent(ev) {
+  // legacy file logging (optional)
   const today   = new Date().toISOString().split('T')[0]
   const logFile = path.join(logsDir, `telemetry-${today}.jsonl`)
   fs.appendFileSync(logFile, JSON.stringify(ev) + '\n')
+
+  // also write to Postgres (non-blocking)
+  pool.query(
+    'INSERT INTO events(event_type, user_id, properties, captured_at) VALUES ($1,$2,$3,$4)',
+    [ev.event, ev.user_id || null, ev.properties || null, ev.timestamp ? new Date(ev.timestamp) : new Date()]
+  ).catch(err => console.error('DB insert error', err))
 }
 
 // ────────────────────────────────────────────────────────────
@@ -59,30 +77,27 @@ app.get('/health', (_, res) => {
 })
 
 // stats (aggregated counts)
-app.get('/stats', (_, res) => {
+app.get('/stats', async (_, res) => {
   try {
-    const files    = fs.readdirSync(logsDir).filter(f => f.endsWith('.jsonl'))
+    // Query last 30 days of events from Postgres
+    const { rows } = await pool.query('SELECT event_type, properties FROM events WHERE captured_at >= NOW() - INTERVAL \'30 days\'' )
+
     const totals   = Object.create(null)
     const accepted = { option_selected: 0, thumbs_up: 0 }
     const rejected = { options_ignored: 0, thumbs_down: 0 }
 
-    files.forEach(f => {
-      const lines = fs.readFileSync(path.join(logsDir, f), 'utf8')
-        .trim().split('\n').filter(Boolean)
+    rows.forEach(ev => {
+      const eventType = ev.event_type
+      totals[eventType] = (totals[eventType] || 0) + 1
 
-      lines.forEach(line => {
-        const ev = JSON.parse(line)
-        totals[ev.event] = (totals[ev.event] || 0) + 1
-
-        if (ev.event === 'task.option_selected')      accepted.option_selected++
-        if (ev.event === 'task.options_ignored')      rejected.options_ignored++
-        if (ev.event === 'task.feedback') {
-          if (ev.properties?.feedbackType === 'thumbs_up')   accepted.thumbs_up++
-          if (ev.properties?.feedbackType === 'thumbs_down') rejected.thumbs_down++
-        }
-      })
+      if (eventType === 'task.option_selected')      accepted.option_selected++
+      if (eventType === 'task.options_ignored')      rejected.options_ignored++
+      if (eventType === 'task.feedback') {
+        const fb = ev.properties?.feedbackType || ev.properties?.feedback_type
+        if (fb === 'thumbs_up')   accepted.thumbs_up++
+        if (fb === 'thumbs_down') rejected.thumbs_down++
+      }
     })
-
     res.json({ totals, accepted, rejected })
   } catch (err) {
     console.error('stats error', err)
@@ -91,18 +106,10 @@ app.get('/stats', (_, res) => {
 })
 
 // recent-events API (last 20 of today)
-app.get('/api/events', (_, res) => {
+app.get('/api/events', async (_, res) => {
   try {
-    const today   = new Date().toISOString().split('T')[0]
-    const logFile = path.join(logsDir, `telemetry-${today}.jsonl`)
-    if (!fs.existsSync(logFile)) return res.json([])
-
-    const events = fs.readFileSync(logFile, 'utf8')
-      .trim().split('\n').filter(Boolean)
-      .map(JSON.parse)
-      .slice(-20).reverse()
-
-    res.json(events)
+    const { rows } = await pool.query(`SELECT * FROM events WHERE captured_at::date = CURRENT_DATE ORDER BY id DESC LIMIT 20`)
+    res.json(rows)
   } catch (err) {
     console.error('Error reading events:', err)
     res.json([])
@@ -110,7 +117,8 @@ app.get('/api/events', (_, res) => {
 })
 
 // ────────────────────────────────────────────────────────────
-// dashboard
+// legacy dashboard (only used when React build not found)
+if (!fs.existsSync(prodDir)) {
 app.get('/', (_, res) => {
   res.send(`
 <!DOCTYPE html>
@@ -195,6 +203,7 @@ app.get('/', (_, res) => {
 </html>
   `)
 })
+}
 
 // ────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
