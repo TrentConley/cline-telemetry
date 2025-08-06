@@ -7,8 +7,8 @@ export default defineConfig({
   // Dev server proxy so the React app can call the Express backend without CORS
   server: {
     proxy: {
-      '/api': 'http://localhost:8000',
-      '/stats': 'http://localhost:8000'
+      '/api': 'http://localhost:8011',
+      '/stats': 'http://localhost:8011'
     }
   }
 })

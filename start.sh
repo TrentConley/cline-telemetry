@@ -20,5 +20,5 @@ else
 fi
 
 # Start the FastAPI server
-echo "🔗 Starting FastAPI server at http://localhost:8000"
-python -m uvicorn main:app --host 0.0.0.0 --port 8000
+echo "🔗 Starting FastAPI server at http://localhost:8011"
+python -m uvicorn main:app --host 0.0.0.0 --port 8011

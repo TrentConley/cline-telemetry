@@ -41,7 +41,7 @@ This project has been migrated from a Node.js/Express backend to FastAPI. The fo
 This will:
 1. Create a Python virtual environment
 2. Install dependencies
-3. Start the FastAPI server on http://localhost:8000
+3. Start the FastAPI server on http://localhost:8011
 
 ### Manual Setup
 
@@ -64,12 +64,12 @@ cp .env.example .env
 
 4. Start the server:
 ```bash
-python -m uvicorn main:app --host 0.0.0.0 --port 8000
+python -m uvicorn main:app --host 0.0.0.0 --port 8011
 ```
 
 For development with auto-reload:
 ```bash
-python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn main:app --host 0.0.0.0 --port 8011 --reload
 ```
 
 ## Environment Variables
@@ -99,8 +99,8 @@ Run the initialization script to set up the PostgreSQL database:
 
 FastAPI automatically generates interactive API documentation:
 
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+- Swagger UI: http://localhost:8011/docs
+- ReDoc: http://localhost:8011/redoc
 
 ## Files
 
@@ -140,7 +140,7 @@ For production deployment, consider using:
 Example with Gunicorn:
 ```bash
 pip install gunicorn
-gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8011
 ```
 
 ## Security

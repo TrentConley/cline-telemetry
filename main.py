@@ -260,7 +260,7 @@ async def dashboard():
 <body>
   <div class="header">
     <h1>🔍 Cline Telemetry Dashboard</h1>
-    <p>Endpoint: <code>http://localhost:8000/capture/</code></p>
+    <p>Endpoint: <code>http://localhost:8011/capture/</code></p>
   </div>
 
   <h2>Recent Events</h2>
@@ -329,8 +329,8 @@ if prod_dir.exists():
     app.mount("/", StaticFiles(directory=str(prod_dir), html=True), name="static")
 
 if __name__ == "__main__":
-    print("🚀 Cline Telemetry Server running at http://localhost:8000")
-    print("📊 Dashboard: http://localhost:8000")
-    print("🔗 Capture endpoint: http://localhost:8000/capture/")
+    print("🚀 Cline Telemetry Server running at http://localhost:8011")
+    print("📊 Dashboard: http://localhost:8011")
+    print("🔗 Capture endpoint: http://localhost:8011/capture/")
     print("📁 Logs saved to: logs/")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8011)
