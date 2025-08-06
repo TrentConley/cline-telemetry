@@ -93,11 +93,33 @@ function App() {
       }
     })
 
-    const eventTypes = Object.entries(eventTypeCounts).map(([name, value]) => ({
-      name: name.replace('task.', ''),
-      value,
-      fullName: name
-    }))
+    const eventTypes = Object.entries(eventTypeCounts).map(([name, value]) => {
+      // Better formatting for event type names
+      let displayName = name.replace('task.', '')
+      
+      // Map specific event types to better names
+      const nameMap = {
+        'conversation_turn': 'Conversation',
+        'tool_used': 'Tool Usage',
+        'option_selected': 'Option Selected',
+        'options_ignored': 'Options Ignored',
+        'feedback': 'Feedback',
+        'created': 'Task Created',
+        'completed': 'Task Completed'
+      }
+      
+      displayName = nameMap[displayName] || displayName
+        .replace(/_/g, ' ')
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+      
+      return {
+        name: displayName,
+        value,
+        fullName: name
+      }
+    })
 
     const timeline = Object.values(timelineData).slice(-20) // Last 20 time points
 
@@ -116,23 +138,7 @@ function App() {
     return events.filter(e => e.event === filter)
   }, [events, filter])
 
-  // Process stats data for acceptance chart
-  const acceptanceData = useMemo(() => {
-    if (!stats) return []
-    
-    return [
-      {
-        name: 'Options',
-        accepted: stats.accepted?.option_selected || 0,
-        rejected: stats.rejected?.options_ignored || 0,
-      },
-      {
-        name: 'Thumbs',
-        accepted: stats.accepted?.thumbs_up || 0,
-        rejected: stats.rejected?.thumbs_down || 0,
-      },
-    ]
-  }, [stats])
+
 
   // Colors for charts
   const COLORS = ['#2563eb', '#dc2626', '#16a34a', '#ca8a04', '#9333ea', '#c2410c']
@@ -160,6 +166,9 @@ function App() {
     const x = cx + radius * Math.cos(-midAngle * RADIAN)
     const y = cy + radius * Math.sin(-midAngle * RADIAN)
 
+    // Only show label if percentage is >= 5% to avoid clutter
+    if (percent < 0.05) return null
+
     return (
       <text 
         x={x} 
@@ -169,10 +178,10 @@ function App() {
         strokeWidth="0.5" 
         textAnchor={x > cx ? 'start' : 'end'} 
         dominantBaseline="central"
-        fontSize="12"
+        fontSize="11"
         fontWeight="600"
       >
-        {`${name} ${(percent * 100).toFixed(0)}%`}
+        {`${name}`}
       </text>
     )
   }
@@ -237,41 +246,7 @@ function App() {
             }
           </div>
         </div>
-        <div className="card">
-          <div className="card-label">Total Cost</div>
-          <div className="card-value">
-            ${stats?.tokens?.total_cost ? 
-              stats.tokens.total_cost.toFixed(3) : 
-              '0.000'
-            }
-          </div>
-          <div className="card-change">
-            {stats?.tokens?.conversation_turns ? 
-              `$${(stats.tokens.total_cost / stats.tokens.conversation_turns).toFixed(4)}/turn` : 
-              'No data'
-            }
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-label">Acceptance Rate</div>
-          <div className="card-value">
-            {stats ? 
-              (() => {
-                const totalAccepted = (stats.accepted?.option_selected || 0) + (stats.accepted?.thumbs_up || 0)
-                const totalRejected = (stats.rejected?.options_ignored || 0) + (stats.rejected?.thumbs_down || 0)
-                const total = totalAccepted + totalRejected
-                return total > 0 ? `${Math.round((totalAccepted / total) * 100)}%` : '0%'
-              })()
-              : '0%'
-            }
-          </div>
-          <div className="card-change">
-            {stats ? 
-              `${((stats.accepted?.option_selected || 0) + (stats.accepted?.thumbs_up || 0))} accepted, ${((stats.rejected?.options_ignored || 0) + (stats.rejected?.thumbs_down || 0))} rejected`
-              : 'No data'
-            }
-          </div>
-        </div>
+
       </div>
 
       {/* Charts Section */}
@@ -318,26 +293,7 @@ function App() {
           </ResponsiveContainer>
         </div>
 
-        <div className="chart-container">
-          <h3>Acceptance Rate</h3>
-          {acceptanceData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={acceptanceData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="name" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" />
-                <Tooltip contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }} />
-                <Legend />
-                <Bar dataKey="accepted" fill="#16a34a" name="Accepted" />
-                <Bar dataKey="rejected" fill="#dc2626" name="Rejected" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div style={{ height: 250, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-              No acceptance data available
-            </div>
-          )}
-        </div>
+
 
         {stats?.tokens && stats.tokens.conversation_turns > 0 && (
           <div className="chart-container">
