@@ -22,3 +22,20 @@ async def ensure_events_table(pool):
                 captured_at TIMESTAMPTZ DEFAULT NOW()
             );
         """)
+
+# ---------------------------------------------------------------------------
+# Stand-alone test helper
+# Run `python db.py` (with PG env vars set) to verify the connection.
+# ---------------------------------------------------------------------------
+if __name__ == "__main__":
+    import asyncio
+    async def _test():
+        pool = await create_db_pool()
+        try:
+            await ensure_events_table(pool)
+            async with pool.acquire() as conn:
+                await conn.execute("SELECT 1")
+            print("✅ Database connection successful")
+        finally:
+            await pool.close()
+    asyncio.run(_test())
