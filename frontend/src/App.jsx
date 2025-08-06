@@ -160,28 +160,28 @@ function App() {
   }
 
   // Custom label renderer for pie chart with proper text styling
-  const renderPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, name, percent }) => {
+  const renderPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, name, percent, index }) => {
+    // Only show label if percentage is >= 8% to avoid clutter and flashing
+    if (percent < 0.08) return null
+
     const RADIAN = Math.PI / 180
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5
+    const radius = outerRadius + 20 // Position labels outside the pie
     const x = cx + radius * Math.cos(-midAngle * RADIAN)
     const y = cy + radius * Math.sin(-midAngle * RADIAN)
 
-    // Only show label if percentage is >= 5% to avoid clutter
-    if (percent < 0.05) return null
-
     return (
       <text 
+        key={`pie-label-${index}`}
         x={x} 
         y={y} 
-        fill="#ffffff" 
-        stroke="#000000" 
-        strokeWidth="0.5" 
+        fill="var(--text-primary)" 
         textAnchor={x > cx ? 'start' : 'end'} 
         dominantBaseline="central"
-        fontSize="11"
-        fontWeight="600"
+        fontSize="12"
+        fontWeight="500"
+        style={{ pointerEvents: 'none' }}
       >
-        {`${name}`}
+        {name}
       </text>
     )
   }
@@ -246,6 +246,24 @@ function App() {
             }
           </div>
         </div>
+        <div className="card">
+          <div className="card-label">Tools Used</div>
+          <div className="card-value">
+            {stats?.tools ? 
+              Object.values(stats.tools).reduce((sum, count) => sum + count, 0) : 
+              0
+            }
+          </div>
+          <div className="card-change">
+            {stats?.tools && Object.keys(stats.tools).length > 0 ? 
+              (() => {
+                const topTool = Object.entries(stats.tools).sort((a, b) => b[1] - a[1])[0]
+                return `Top: ${topTool[0].replace(/_/g, ' ')} (${topTool[1]})`
+              })() : 
+              'No tool data'
+            }
+          </div>
+        </div>
 
       </div>
 
@@ -279,16 +297,29 @@ function App() {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={renderPieLabel}
-                outerRadius={80}
+                label={false}
+                outerRadius={70}
                 fill="#8884d8"
                 dataKey="value"
+                animationBegin={0}
+                animationDuration={800}
+                isAnimationActive={true}
               >
                 {processedData.eventTypes.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell 
+                    key={`cell-${entry.fullName}`} 
+                    fill={COLORS[index % COLORS.length]} 
+                  />
                 ))}
               </Pie>
-              <Tooltip contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }} />
+              <Tooltip 
+                formatter={(value, name) => [`${value} events`, name]}
+                contentStyle={{ 
+                  backgroundColor: 'var(--bg-secondary)', 
+                  border: '1px solid var(--border-color)', 
+                  color: 'var(--text-primary)' 
+                }} 
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -329,6 +360,39 @@ function App() {
                   contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }} 
                 />
                 <Bar dataKey="value" fill="#16a34a" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {stats?.tools && Object.keys(stats.tools).length > 0 && (
+          <div className="chart-container">
+            <h3>Tool Usage</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={Object.entries(stats.tools).map(([tool, count]) => ({
+                name: tool.replace(/_/g, ' ').split(' ').map(word => 
+                  word.charAt(0).toUpperCase() + word.slice(1)
+                ).join(' '),
+                value: count,
+                fullName: tool
+              })).sort((a, b) => b.value - a.value)}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="name" stroke="#6b7280" />
+                <YAxis stroke="#6b7280" />
+                <Tooltip 
+                  formatter={(value, name) => [`${value} uses`, 'Tool Usage']}
+                  labelFormatter={(label) => {
+                    const toolData = Object.entries(stats.tools).map(([tool, count]) => ({
+                      name: tool.replace(/_/g, ' ').split(' ').map(word => 
+                        word.charAt(0).toUpperCase() + word.slice(1)
+                      ).join(' '),
+                      fullName: tool
+                    })).find(d => d.name === label)
+                    return toolData?.fullName || label
+                  }}
+                  contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }} 
+                />
+                <Bar dataKey="value" fill="#ca8a04" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

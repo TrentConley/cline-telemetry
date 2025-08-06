@@ -165,6 +165,9 @@ async def get_stats():
             "conversation_turns": 0
         }
         
+        # Tool usage tracking
+        tool_usage = {}
+        
         for row in rows:
             event_type = row["event_type"]
             totals[event_type] = totals.get(event_type, 0) + 1
@@ -190,8 +193,12 @@ async def get_stats():
                     tokens["total_cache_read"] += properties.get("cacheReadTokens", 0)
                     tokens["total_cache_write"] += properties.get("cacheWriteTokens", 0)
                     tokens["total_cost"] += properties.get("totalCost", 0.0)
+            elif event_type == "task.tool_used":
+                properties = json.loads(row["properties"]) if row["properties"] else {}
+                tool_name = properties.get("tool", "unknown")
+                tool_usage[tool_name] = tool_usage.get(tool_name, 0) + 1
         
-        return {"totals": totals, "accepted": accepted, "rejected": rejected, "tokens": tokens}
+        return {"totals": totals, "accepted": accepted, "rejected": rejected, "tokens": tokens, "tools": tool_usage}
     except Exception as err:
         print(f"❌ Stats error: {err}")
         raise HTTPException(status_code=500, detail="Stats failed")
