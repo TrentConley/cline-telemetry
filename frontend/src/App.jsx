@@ -211,11 +211,46 @@ function App() {
           </div>
         </div>
         <div className="card">
-          <div className="card-label">Active Tasks</div>
+          <div className="card-label">Tokens In</div>
           <div className="card-value">
-            {new Set(events.map(e => e.properties?.taskId).filter(Boolean)).size}
+            {stats?.tokens?.total_tokens_in ? 
+              (stats.tokens.total_tokens_in / 1000).toFixed(1) + 'K' : 
+              '0'
+            }
           </div>
-          <div className="card-change">Unique task IDs</div>
+          <div className="card-change">
+            {stats?.tokens?.conversation_turns || 0} turns
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-label">Tokens Out</div>
+          <div className="card-value">
+            {stats?.tokens?.total_tokens_out ? 
+              (stats.tokens.total_tokens_out / 1000).toFixed(1) + 'K' : 
+              '0'
+            }
+          </div>
+          <div className="card-change">
+            {stats?.tokens?.total_cache_read ? 
+              `${(stats.tokens.total_cache_read / 1000).toFixed(1)}K cached` : 
+              'No cache'
+            }
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-label">Total Cost</div>
+          <div className="card-value">
+            ${stats?.tokens?.total_cost ? 
+              stats.tokens.total_cost.toFixed(3) : 
+              '0.000'
+            }
+          </div>
+          <div className="card-change">
+            {stats?.tokens?.conversation_turns ? 
+              `$${(stats.tokens.total_cost / stats.tokens.conversation_turns).toFixed(4)}/turn` : 
+              'No data'
+            }
+          </div>
         </div>
         <div className="card">
           <div className="card-label">Acceptance Rate</div>
@@ -304,6 +339,45 @@ function App() {
           )}
         </div>
 
+        {stats?.tokens && stats.tokens.conversation_turns > 0 && (
+          <div className="chart-container">
+            <h3>Token Usage</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={[
+                {
+                  name: 'Tokens In',
+                  value: stats.tokens.total_tokens_in,
+                  display: `${(stats.tokens.total_tokens_in / 1000).toFixed(1)}K`
+                },
+                {
+                  name: 'Tokens Out',
+                  value: stats.tokens.total_tokens_out,
+                  display: `${(stats.tokens.total_tokens_out / 1000).toFixed(1)}K`
+                },
+                {
+                  name: 'Cache Read',
+                  value: stats.tokens.total_cache_read,
+                  display: `${(stats.tokens.total_cache_read / 1000).toFixed(1)}K`
+                },
+                {
+                  name: 'Cache Write',
+                  value: stats.tokens.total_cache_write,
+                  display: `${(stats.tokens.total_cache_write / 1000).toFixed(1)}K`
+                }
+              ]}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="name" stroke="#6b7280" />
+                <YAxis stroke="#6b7280" />
+                <Tooltip 
+                  formatter={(value, name) => [`${(value / 1000).toFixed(1)}K tokens`, name]}
+                  contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }} 
+                />
+                <Bar dataKey="value" fill="#16a34a" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
         {processedData.usageData.length > 0 && (
           <div className="chart-container full-width">
             <h3>Usage by Model</h3>
@@ -385,6 +459,21 @@ function App() {
                   {event.properties?.source && (
                     <span className="property-badge source">
                       👤 {event.properties.source}
+                    </span>
+                  )}
+                  {event.event === 'task.conversation_turn' && event.properties?.tokensIn && (
+                    <span className="property-badge tokens">
+                      🎫 {(event.properties.tokensIn / 1000).toFixed(1)}K in
+                    </span>
+                  )}
+                  {event.event === 'task.conversation_turn' && event.properties?.tokensOut && (
+                    <span className="property-badge tokens">
+                      📤 {event.properties.tokensOut} out
+                    </span>
+                  )}
+                  {event.event === 'task.conversation_turn' && event.properties?.cacheReadTokens > 0 && (
+                    <span className="property-badge cache">
+                      ⚡ {(event.properties.cacheReadTokens / 1000).toFixed(1)}K cached
                     </span>
                   )}
                 </div>

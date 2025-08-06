@@ -144,7 +144,7 @@ async def get_stats():
     """Get aggregated statistics for the last 30 days"""
     try:
         if not db_pool:
-            return {"totals": {}, "accepted": {}, "rejected": {}}
+            return {"totals": {}, "accepted": {}, "rejected": {}, "tokens": {}}
         
         async with db_pool.acquire() as connection:
             rows = await connection.fetch(
@@ -154,6 +154,16 @@ async def get_stats():
         totals = {}
         accepted = {"option_selected": 0, "thumbs_up": 0}
         rejected = {"options_ignored": 0, "thumbs_down": 0}
+        
+        # Token metrics
+        tokens = {
+            "total_tokens_in": 0,
+            "total_tokens_out": 0,
+            "total_cache_read": 0,
+            "total_cache_write": 0,
+            "total_cost": 0.0,
+            "conversation_turns": 0
+        }
         
         for row in rows:
             event_type = row["event_type"]
@@ -170,8 +180,18 @@ async def get_stats():
                     accepted["thumbs_up"] += 1
                 elif fb == "thumbs_down":
                     rejected["thumbs_down"] += 1
+            elif event_type == "task.conversation_turn":
+                properties = json.loads(row["properties"]) if row["properties"] else {}
+                # Only count assistant turns for token metrics (they have token data)
+                if properties.get("source") == "assistant":
+                    tokens["conversation_turns"] += 1
+                    tokens["total_tokens_in"] += properties.get("tokensIn", 0)
+                    tokens["total_tokens_out"] += properties.get("tokensOut", 0)
+                    tokens["total_cache_read"] += properties.get("cacheReadTokens", 0)
+                    tokens["total_cache_write"] += properties.get("cacheWriteTokens", 0)
+                    tokens["total_cost"] += properties.get("totalCost", 0.0)
         
-        return {"totals": totals, "accepted": accepted, "rejected": rejected}
+        return {"totals": totals, "accepted": accepted, "rejected": rejected, "tokens": tokens}
     except Exception as err:
         print(f"❌ Stats error: {err}")
         raise HTTPException(status_code=500, detail="Stats failed")
