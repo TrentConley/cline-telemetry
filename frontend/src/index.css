@@ -3,7 +3,7 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
+  color-scheme: dark;
   
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -22,21 +22,11 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #ffffff !important;
+  background-color: #0a0a0a !important;
 }
 
 html {
-  background-color: #ffffff !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  body {
-    background-color: #000000 !important;
-  }
-  
-  html {
-    background-color: #000000 !important;
-  }
+  background-color: #0a0a0a !important;
 }
 
 #root {
@@ -54,22 +44,12 @@ html {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #475569;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-@media (prefers-color-scheme: dark) {
-  ::-webkit-scrollbar-thumb {
-    background: #475569;
-  }
-  
-  ::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
-  }
+  background: #64748b;
 }
 
 /* Focus styles */
