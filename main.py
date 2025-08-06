@@ -231,14 +231,13 @@ async def get_recent_events():
         return []
 
 # Legacy dashboard (only used when React build not found)
-@app.get("/", response_class=HTMLResponse)
-async def dashboard():
-    """Legacy dashboard when React build is not available"""
-    if prod_dir.exists():
-        # This should be handled by static files, but just in case
-        raise HTTPException(status_code=404, detail="Not found")
-    
-    html_content = f"""
+# Note: This route is only registered when React build is NOT available
+if not Path("frontend/dist").exists():
+    @app.get("/", response_class=HTMLResponse)
+    async def dashboard():
+        """Legacy dashboard when React build is not available"""
+        
+        html_content = f"""
 <!DOCTYPE html>
 <html>
 <head>
@@ -319,8 +318,8 @@ async def dashboard():
   </script>
 </body>
 </html>
-    """
-    return HTMLResponse(content=html_content)
+        """
+        return HTMLResponse(content=html_content)
 
 # Serve React build (if present) – production mode
 # Mount static files AFTER all API routes to ensure API routes take precedence
