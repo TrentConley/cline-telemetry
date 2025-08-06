@@ -69,10 +69,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Serve React build (if present) – production mode
-prod_dir = Path("frontend/dist")
-if prod_dir.exists():
-    app.mount("/", StaticFiles(directory=str(prod_dir), html=True), name="static")
+# Note: Static file mounting moved to end of file to prevent API route conflicts
 
 # Helper function to append events
 async def append_event(event: Dict[str, Any]):
@@ -324,6 +321,12 @@ async def dashboard():
 </html>
     """
     return HTMLResponse(content=html_content)
+
+# Serve React build (if present) – production mode
+# Mount static files AFTER all API routes to ensure API routes take precedence
+prod_dir = Path("frontend/dist")
+if prod_dir.exists():
+    app.mount("/", StaticFiles(directory=str(prod_dir), html=True), name="static")
 
 if __name__ == "__main__":
     print("🚀 Cline Telemetry Server running at http://localhost:8000")
